@@ -118,7 +118,7 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
-app.get("/user", verifyToken, async (req, res) => {
+app.get("/auth/user", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password -__v");
 
@@ -134,7 +134,7 @@ app.get("/user", verifyToken, async (req, res) => {
   }
 });
 
-app.put("/user", verifyToken, async (req, res) => {
+app.put("/auth/user", verifyToken, async (req, res) => {
   try {
     const id = req.user.id;
 
@@ -539,6 +539,18 @@ app.put("/profile/:username/follow", verifyToken, async (req, res) => {
     };
 
     res.status(200).json({ message: "Toggled follow", profile });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.get("/tags", async (req, res) => {
+  try {
+    const tags = await Article.find().distinct('tagList').exec();
+
+    res.status(200).json({ tags });
   } catch (error) {
     res
       .status(500)
