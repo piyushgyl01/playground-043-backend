@@ -89,7 +89,7 @@ app.post("/auth/login", async (req, res) => {
     const user = await User.findOne({ username });
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
@@ -111,6 +111,44 @@ app.post("/auth/login", async (req, res) => {
     });
 
     res.status(200).json({ message: "Logged in successfully", user });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.get("/user", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password -__v");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.put("/user", verifyToken, async (req, res) => {
+  try {
+    const id = req.user.id;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+
+    res.status(200).json({ message: "User updated", user: updatedUser });
   } catch (error) {
     res
       .status(500)
