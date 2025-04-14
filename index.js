@@ -72,7 +72,7 @@ app.post("/auth/register", async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Interval server error", error: error.message });
+      .json({ message: "Internal server error", error: error.message });
   }
 });
 
@@ -114,13 +114,183 @@ app.post("/auth/login", async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Interval server error", error: error.message });
+      .json({ message: "Internal server error", error: error.message });
   }
 });
 
 app.post("/auth/logout", (req, res) => {
   res.clearCookie("access_token");
   res.json({ message: "Logged out successfully" });
+});
+
+app.post("/articles", verifyToken, async (req, res) => {
+  const { title, description, body, tagList } = req.body;
+
+  if (!title || !description || !body) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const id = req.user.id;
+
+  try {
+    const newArticle = new Article({
+      title,
+      description,
+      body,
+      tagList,
+      author: id,
+    });
+
+    const savedArticle = await newArticle.save();
+
+    res
+      .status(201)
+      .json({ message: "Article created successfully", article: savedArticle });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.delete("/articles/:id", verifyToken, async (req, res) => {
+  const id = req.user.id;
+
+  try {
+    const article = await Article.findById(req.params.id);
+
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    if (article.author.toString() !== id) {
+      return res
+        .status(403)
+        .json({ message: "Only the author can delete this article" });
+    }
+
+    await Article.findByIdAndDelete(req.params.id);
+
+    res
+      .status(200)
+      .json({ message: "Article deleted successfully", article: article });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.put("/articles/:id", verifyToken, async (req, res) => {
+  const id = req.user.id;
+
+  try {
+    const article = await Article.findById(req.params.id);
+
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    if (article.author.toString() !== id) {
+      return res
+        .status(403)
+        .json({ message: "Only the author can edit this article" });
+    }
+
+    const updatedArticle = await Article.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Article updated successfully",
+      article: updatedArticle,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.get("/articles", async (req, res) => {
+  try {
+    const articles = await Article.find().populate(
+      "author",
+      "name username image"
+    );
+
+    res.status(200).json({ articles });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.get("/articles/:id", async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).populate(
+      "author",
+      "name username image"
+    );
+
+    res.status(200).json({ article });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.put("/articles/:id/favorite", verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const isAlreadyFavorited =
+      user.favouriteArticles && user.favouriteArticles.includes(article._id);
+
+    if (isAlreadyFavorited) {
+      user.favouriteArticles = user.favouriteArticles.filter(
+        (id) => id.toString() !== article._id.toString()
+      );
+      article.favouritesCount = Math.max(0, article.favouritesCount - 1);
+    } else {
+      if (!user.favouriteArticles) {
+        user.favouriteArticles = [];
+      }
+
+      user.favouriteArticles.push(article._id);
+
+      article.favouritesCount = (article.favouritesCount || 0) + 1;
+    }
+
+    await user.save();
+    await article.save();
+
+    res.status(200).json({
+      message: "Favorite toggled",
+      article: {
+        ...article.toObject(),
+        favorited: !isAlreadyFavorited,
+      },
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
 });
 
 app.listen(PORT, () => {
