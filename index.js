@@ -434,6 +434,80 @@ app.put("/articles/:id/comments/:commentId", verifyToken, async (req, res) => {
   }
 });
 
+app.get("/profile/:username", verifyToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+
+    const profile = {
+      username: user.username,
+      name: user.name,
+      bio: user.bio || "",
+      image: user.image,
+      following: false,
+    };
+
+    if (req.user) {
+      const currentUser = await User.findById(req.user.id);
+      if (currentUser && currentUser.followingUsers) {
+        profile.following = currentUser.followingUsers.includes(user._id);
+      }
+    }
+
+    res.status(200).json({ profile });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
+app.put("/profile/:username/follow", verifyToken, async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const currentUser = await User.findById(req.user.id);
+    const targetUser = await User.findOne({ username });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+
+    const isFollowing = currentUser.followingUsers.some(
+      (id) => id.toString() === targetUser._id.toString()
+    );
+
+    if (isFollowing) {
+      currentUser.followingUsers = currentUser.followingUsers.filter(
+        (id) => id.toString() !== targetUser._id.toString()
+      );
+    } else {
+      currentUser.followingUsers.push(targetUser._id);
+    }
+
+    await currentUser.save();
+
+    const profile = {
+      username: targetUser.username,
+      name: targetUser.name,
+      bio: targetUser.bio || "",
+      image: targetUser.image,
+      following: !isFollowing,
+    };
+
+    res.status(200).json({ message: "Toggled follow", profile });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
