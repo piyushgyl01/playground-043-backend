@@ -134,6 +134,8 @@ app.get("/auth/user", verifyToken, async (req, res) => {
   }
 });
 
+//
+
 app.put("/auth/user", verifyToken, async (req, res) => {
   try {
     const id = req.user.id;
