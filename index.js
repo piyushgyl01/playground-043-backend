@@ -77,9 +77,9 @@ app.post("/auth/register", async (req, res) => {
 });
 
 app.post("/auth/login", async (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password } = req.body;
 
-  if (!username || !password || !email) {
+  if (!username || !password ) {
     return res
       .status(400)
       .json({ message: "Please fill in all required fields." });
@@ -133,8 +133,6 @@ app.get("/auth/user", verifyToken, async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 });
-
-//
 
 app.put("/auth/user", verifyToken, async (req, res) => {
   try {
