@@ -15,7 +15,9 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(express.json());
-app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
+app.use(
+  cors({ credentials: true, origin: "https://playground-043.vercel.app" })
+);
 app.use(cookieParser());
 
 connectToDB();
@@ -79,7 +81,7 @@ app.post("/auth/register", async (req, res) => {
 app.post("/auth/login", async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password ) {
+  if (!username || !password) {
     return res
       .status(400)
       .json({ message: "Please fill in all required fields." });
@@ -548,7 +550,7 @@ app.put("/profile/:username/follow", verifyToken, async (req, res) => {
 
 app.get("/tags", async (req, res) => {
   try {
-    const tags = await Article.find().distinct('tagList').exec();
+    const tags = await Article.find().distinct("tagList").exec();
 
     res.status(200).json({ tags });
   } catch (error) {
