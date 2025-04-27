@@ -292,11 +292,6 @@ app.put("/auth/user", verifyToken, async (req, res) => {
   }
 });
 
-// app.post("/auth/logout", (req, res) => {
-//   res.clearCookie("access_token");
-//   res.json({ message: "Logged out successfully" });
-// });
-
 app.post("/articles", verifyToken, async (req, res) => {
   const { title, description, body, tagList } = req.body;
 
